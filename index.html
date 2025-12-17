@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live HTML Editor with Templates & Blocks</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #000000;
+      --border: #ddd;
+    }
+    body.dark {
+      --bg: #0f172a;
+      --panel: #020617;
+      --text: #e5e7eb;
+      --border: #1e293b;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+    }
+    .container { display: flex; width: 100%; height: 100%; }
+    .sidebar {
+      width: 220px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 10;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .template-btn {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      text-align: left;
+    }
+    .editor {
+      width: 40%;
+      padding: 12px;
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+    }
+    textarea {
+      flex: 1;
+      width: 100%;
+      resize: none;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text);
+    }
+    .preview {
+      width: 40%;
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      padding: 10px;
+      overflow: auto;
+    }
+    #suggestionBox {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: #111;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: none;
+      font-size: 12px;
+    }
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button id="toggleSidebar" class="template-btn" style="position:fixed;top:10px;left:10px;z-index:20;width:auto;">☰ Menu</button>
+
+    <div class="sidebar" id="sidebar">
+      <h3>Templates</h3>
+      <button class="template-btn" onclick="loadTemplate('basic')">📄 Basic HTML</button>
+      <button class="template-btn" onclick="loadTemplate('landing')">🚀 Landing Page</button>
+      <button class="template-btn" onclick="loadTemplate('contact')">📬 Contact Form</button>
+      <button class="template-btn" onclick="loadTemplate('portfolio')">🧑‍💼 Portfolio</button>
+      <button class="template-btn" onclick="loadTemplate('kids')">🎨 Kids Alphabet</button>
+
+      <hr />
+      <h3>Blocks</h3>
+      <button class="template-btn" onclick="insertBlock('navbar')">🧭 Navbar</button>
+      <button class="template-btn" onclick="insertBlock('card')">🃏 Card</button>
+      <button class="template-btn" onclick="insertBlock('button')">🔘 Button</button>
+      <button class="template-btn" onclick="insertBlock('footer')">📌 Footer</button>
+    </div>
+
+    <div class="editor">
+      <div class="top-actions">
+        <button class="template-btn" onclick="downloadHTML()">⬇ Download</button>
+        <button class="template-btn" onclick="toggleDark()">🌙 Dark Mode</button>
+        <button class="template-btn" onclick="explainCode()">🧠 Explain</button>
+      </div>
+      <h2>HTML Editor</h2>
+      <textarea id="htmlInput"></textarea>
+    </div>
+
+    <div class="preview" id="previewArea"></div>
+    <div id="suggestionBox"></div>
+
+  </div>
+
+  <script>
+    const textarea = document.getElementById('htmlInput');
+    const previewArea = document.getElementById('previewArea');
+    const suggestionBox = document.getElementById('suggestionBox');
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleSidebar');
+
+    const templates = {
+      basic: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Basic HTML</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>Edit this text to learn HTML.</p>
+</body>
+</html>`,
+
+      landing: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Landing Page</title>
+  <style>
+    body { font-family: Arial; padding: 40px; background: #f9fafb; }
+    .box { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; }
+    button { padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Your Product</h1>
+    <p>Explain your product here.</p>
+    <button>Get Started</button>
+  </div>
+</body>
+</html>`,
+
+      contact: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Contact Form</title>
+</head>
+<body>
+  <h2>Contact Us</h2>
+  <form>
+    <input placeholder="Name" /><br /><br />
+    <input placeholder="Email" /><br /><br />
+    <textarea placeholder="Message"></textarea><br /><br />
+    <button>Send</button>
+  </form>
+</body>
+</html>`,
+
+      portfolio: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Portfolio</title>
+</head>
+<body>
+  <h1>Your Name</h1>
+  <p>Web Developer</p>
+  <h3>Projects</h3>
+  <ul>
+    <li>Project One</li>
+    <li>Project Two</li>
+  </ul>
+</body>
+</html>`,
+
+      kids: `<!DOCTYPE html>
+<html>
+<head>
+  <title>Learn Alphabets</title>
+  <style>
+    body { font-family: Comic Sans MS; text-align: center; }
+    .letter { font-size: 60px; color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>Learn Alphabets</h1>
+  <div class="letter">A</div>
+  <p>A for Apple 🍎</p>
+</body>
+</html>`
+    };
+
+    const blocks = {
+      navbar: `<nav style="padding:10px;background:#4f46e5;color:white">Home | About | Contact</nav>`,
+      card: `<div style="border:1px solid #ddd;padding:15px;border-radius:8px;max-width:300px">
+  <h3>Card Title</h3>
+  <p>Card content goes here.</p>
+</div>`,
+      button: `<button style="padding:10px 16px;background:#16a34a;color:white;border:none;border-radius:6px">Click Me</button>`,
+      footer: `<footer style="padding:10px;text-align:center;background:#f3f4f6">© 2025 Your Site</footer>`
+    };
+
+    function updatePreview() {
+      previewArea.innerHTML = textarea.value;
+    }
+
+    function showSuggestion(msg) {
+      suggestionBox.textContent = msg;
+      suggestionBox.style.display = 'block';
+      setTimeout(() => suggestionBox.style.display = 'none', 2500);
+    }
+
+    function loadTemplate(name) {
+      textarea.value = templates[name];
+      updatePreview();
+      showSuggestion(`Template "${name}" loaded`);
+    }
+
+    function insertBlock(name) {
+      const cursor = textarea.selectionStart || 0;
+      const before = textarea.value.slice(0, cursor);
+      const after = textarea.value.slice(cursor);
+      textarea.value = before + '\n' + blocks[name] + '\n' + after;
+      updatePreview();
+      showSuggestion(`Block "${name}" inserted`);
+    }
+
+    textarea.addEventListener('input', updatePreview);
+
+    function downloadHTML() {
+      const blob = new Blob([textarea.value], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'index.html';
+      a.click();
+      showSuggestion('HTML file downloaded');
+    }
+
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      showSuggestion('Theme toggled');
+    }
+
+    function explainCode() {
+      const lines = textarea.value.split('\n').length;
+      showSuggestion(`This HTML contains ${lines} lines. Use headings, semantic tags, and clean structure.`);
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Initial load
+    loadTemplate('basic');
+  </script>
+</body>
+    </html>
